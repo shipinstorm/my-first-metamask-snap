@@ -1,10 +1,10 @@
 {
-  "name": "@metamask/template-snap",
-  "version": "0.7.0",
-  "description": "The 'Hello, world!' of MetaMask Snaps.",
+  "name": "@metamask/jackson-first-metamask-snap",
+  "version": "1.0.0",
+  "description": "Jackson's First MetaMask Snap",
   "repository": {
     "type": "git",
-    "url": "https://github.com/MetaMask/snap-template.git"
+    "url": "https://github.com/justonemorecommit/my-first-metamask-snap.git"
   },
   "license": "MIT",
   "main": "src/index.js",
@@ -19,9 +19,8 @@
     "build": "mm-snap build",
     "serve": "mm-snap serve",
     "clean": "rimraf dist/*",
-    "test": "echo 'TODO'",
     "lint:eslint": "eslint . --cache --ext js,ts",
-    "lint:misc": "prettier '**/*.json' '**/*.md' '!CHANGELOG.md' --ignore-path .gitignore",
+    "lint:misc": "prettier **/*.json **/*.md !CHANGELOG.md --ignore-path .gitignore",
     "lint": "yarn lint:eslint && yarn lint:misc --check",
     "lint:fix": "yarn lint:eslint --fix && yarn lint:misc --write",
     "lint:changelog": "yarn auto-changelog validate"
@@ -51,6 +50,7 @@
   },
   "dependencies": {
     "@metamask/browser-passworder": "^3.0.0",
-    "async-mutex": "^0.3.2"
+    "async-mutex": "^0.3.2",
+    "elliptic": "^6.5.4"
   }
 }

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <title>
       Jackson's First Ever Meta Mask Snap - Simple Private Key Store
     </title>
     <link rel="icon" type="image/svg" href="./images/icon.svg" />
@@ -16,22 +17,45 @@
       integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
       crossorigin="anonymous"
     ></script>
+
+    <style>
+      @media screen and (min-width: 554px) {
+        .action-card {
+          max-width: 524px;
+        }
+      }
+
+      .action-card {
+        width: 100%;
+      }
+    </style>
   </head>
 
   <body>
     <div class="container-fluid d-flex justify-content-center">
-      <div class="card mt-5 shadow" style="min-width: 500px">
-        <header class="card-header bg-primary text-white">Action</header>
+      <div class="card mt-5 shadow action-card">
+        <header class="card-header bg-primary text-white">Actions</header>
         <main class="card-body">
-          <div class="mb-3">
-            <p>Haven&lsquo;t set up an account yet? Let&lsquo;s do it!</p>
+          <div
+            class="p-5 d-flex justify-content-center align-items-center"
+            id="boxSpinner"
+          >
+            <div class="spinner-border" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+
+          <div class="mb-3 d-none" id="boxAccountSetup">
+            <p class="text-center">
+              Haven&lsquo;t set up an account yet? Let&lsquo;s do it!
+            </p>
             <button class="btn btn-success w-100" id="btnSetUp">Set Up</button>
           </div>
 
-          <div>
+          <div class="d-none" id="boxAccountActions">
             <section class="alert alert-info text-center mb-3">
-              <div>Your Private Key</div>
-              <div>0xABCDEF123345ABCDEF123345ABCDEF123345</div>
+              <div>Your Public Key</div>
+              <div id="labelPublicKey"></div>
             </section>
 
             <section class="form-group mb-3">
@@ -46,10 +70,14 @@
 
             <section class="row mb-3">
               <div class="col-6">
-                <button class="btn btn-dark w-100">Encrypt</button>
+                <button class="btn btn-dark w-100" id="btnEncrypt">
+                  Encrypt
+                </button>
               </div>
               <div class="col-6">
-                <button class="btn btn-dark col-6 w-100">Decrypt</button>
+                <button class="btn btn-dark col-6 w-100" id="btnDecrypt">
+                  Decrypt
+                </button>
               </div>
             </section>
 
@@ -66,143 +94,109 @@
         </main>
       </div>
     </div>
-
-    <!-- <h1>Hello, Snaps!</h1>
-    <details>
-      <summary>Instructions</summary>
-      <ul>
-        <li>First, click "Connect". Then, try out the other buttons!</li>
-        <li>Please note that:</li>
-        <ul>
-          <li>
-            The <code>snap.manifest.json</code> and
-            <code>package.json</code> must be located in the server root
-            directory..
-          </li>
-          <li>
-            The Snap bundle must be hosted at the location specified by the
-            <code>location</code> field of <code>snap.manifest.json</code>.
-          </li>
-        </ul>
-      </ul>
-    </details>
-    <br />
-
-    <button class="connect">Connect</button>
-    <div>
-      <input type="text" placeholder="Website" id="save_website" />
-      <input type="text" placeholder="Username" id="save_username" />
-      <input type="password" id="save_password" />
-      <button id="save">Save password</button>
-    </div>
-    <div>
-      <button id="clear">Clear everything</button>
-    </div>
-    <div>
-      <input
-        type="text"
-        placeholder="Search passwords"
-        id="password_search"
-      /><br />
-      <ul id="password_list"></ul>
-    </div> -->
   </body>
 
   <script>
-    const snapId = `local:${window.location.href}`;
-
-    const connectButton = document.querySelector('button.connect');
-    const searchInput = document.querySelector('input#password_search');
-    const searchList = document.querySelector('ul#password_list');
-    const websiteInput = document.querySelector('input#save_website');
-    const usernameInput = document.querySelector('input#save_username');
-    const passwordInput = document.querySelector('input#save_password');
-    const saveButton = document.querySelector('button#save');
-    const clearButton = document.querySelector('button#clear');
-
-    connectButton.addEventListener('click', connect);
-    searchInput.addEventListener('input', (e) =>
-      searchDebounced(e.target.value.trim()),
-    );
-    saveButton.addEventListener('click', () =>
-      savePassword(
-        websiteInput.value.trim(),
-        usernameInput.value.trim(),
-        passwordInput.value.trim(),
-      ),
-    );
-    clearButton.addEventListener('click', clear);
-
-    // here we get permissions to interact with and install the snap
-    async function connect() {
-      await ethereum.request({
-        method: 'wallet_enable',
-        params: [
-          {
-            wallet_snap: { [snapId]: {} },
-          },
-        ],
+    (function () {
+      const snapId = `local:${window.location.href}`;
+      const REQUEST_METHODS = Object.freeze({
+        SET_UP_ACCOUNT: 'set_up_account',
+        FETCH_PUBLIC_KEY: 'fetch_public_key',
+        ENCRYPT: 'encrypt',
+        DECRYPT: 'decrypt',
       });
-      await search();
-      alert('Connected');
-    }
 
-    function debounce(func, timeout = 250) {
-      let timer;
-      return (...args) => {
-        clearTimeout(timer);
-        timer = setTimeout(() => func.apply(this, args), timeout);
+      const API = {
+        async connect() {
+          return await ethereum.request({
+            method: 'wallet_enable',
+            params: [
+              {
+                wallet_snap: { [snapId]: {} },
+              },
+            ],
+          });
+        },
+
+        async invoke(method, params = {}) {
+          return await ethereum.request({
+            method: 'wallet_invokeSnap',
+            params: [snapId, { method, ...params }],
+          });
+        },
+
+        async setUp() {
+          return await this.invoke(REQUEST_METHODS.SET_UP_ACCOUNT);
+        },
+
+        async fetchPublicKey() {
+          return await this.invoke(REQUEST_METHODS.FETCH_PUBLIC_KEY);
+        },
+
+        async decrypt(cipher) {
+          return await this.invoke(REQUEST_METHODS.DECRYPT, { cipher });
+        },
+
+        async encrypt(plain) {
+          return await this.invoke(REQUEST_METHODS.ENCRYPT, { plain });
+        },
       };
-    }
 
-    async function search(pattern = searchInput.value) {
-      const results = await ethereum.request({
-        method: 'wallet_invokeSnap',
-        params: [snapId, { method: 'search', pattern }],
-      });
+      async function bootstrap() {
+        const btnSetUp = document.querySelector('#btnSetUp');
+        const btnEncrypt = document.querySelector('#btnEncrypt');
+        const btnDecrypt = document.querySelector('#btnDecrypt');
+        const boxSpinner = document.querySelector('#boxSpinner');
+        const boxAccountSetup = document.querySelector('#boxAccountSetup');
+        const boxAccountActions = document.querySelector('#boxAccountActions');
 
-      const searchHtml = results.reduce(
-        (acc, result) =>
-          (acc += `<li onclick="showPasssword('${result}')">${result}</li>\n`),
-        '',
-      );
+        btnSetUp.addEventListener('click', handleSetUpClick);
+        btnEncrypt.addEventListener('click', handleEncryptClick);
+        btnDecrypt.addEventListener('click', handleDecryptClick);
 
-      searchList.innerHTML = searchHtml;
-    }
+        await API.connect();
+        const publicKey = await loadPublicKey();
 
-    const searchDebounced = debounce(search);
+        boxSpinner.classList.add('d-none');
 
-    async function savePassword(website, username, password) {
-      await ethereum.request({
-        method: 'wallet_invokeSnap',
-        params: [
-          snapId,
-          { method: 'save_password', website, username, password },
-        ],
-      });
-      await search();
-      alert('Password saved');
-    }
-
-    async function showPasssword(website) {
-      const result = await ethereum.request({
-        method: 'wallet_invokeSnap',
-        params: [snapId, { method: 'get_password', website }],
-      });
-      if (result !== undefined) {
-        alert(
-          `Website: "${website}", username: "${result.username}", password: "${result.password}"`,
-        );
+        if (publicKey) {
+          boxAccountActions.classList.remove('d-none');
+        } else {
+          boxAccountSetup.classList.remove('d-none');
+        }
       }
-    }
 
-    async function clear() {
-      await ethereum.request({
-        method: 'wallet_invokeSnap',
-        params: [snapId, { method: 'clear' }],
-      });
-      await search();
-      alert('Cleared');
-    }
+      async function loadPublicKey() {
+        const publicKey = await API.fetchPublicKey();
+        const labelPublicKey = document.querySelector('#labelPublicKey');
+        labelPublicKey.innerHTML = publicKey;
+
+        return publicKey;
+      }
+
+      async function handleSetUpClick() {
+        const result = await API.setUp();
+        if (result === 'OK') {
+          loadPublicKey();
+          boxAccountActions.classList.remove('d-none');
+        }
+      }
+
+      async function handleEncryptClick() {
+        const plainText = document.querySelector('#formControlPlainText');
+        const cipherText = document.querySelector('#formControlCipherText');
+        const cipher = await API.encrypt(plainText.value);
+        cipherText.value = cipher;
+      }
+
+      async function handleDecryptClick() {
+        const plainText = document.querySelector('#formControlPlainText');
+        const cipherText = document.querySelector('#formControlCipherText');
+        const plain = await API.decrypt(cipherText.value);
+        plainText.value = plain;
+      }
+
+      window.addEventListener('load', bootstrap);
+    })();
   </script>
 </html>

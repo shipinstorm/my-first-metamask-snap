@@ -14,6 +14,12 @@ module.exports = {
       },
       extends: ['@metamask/eslint-config-nodejs'],
     },
+    {
+      files: ['./src/*.js'],
+      parserOptions: {
+        sourceType: 'module',
+      },
+    },
 
     {
       files: ['*.test.js'],
