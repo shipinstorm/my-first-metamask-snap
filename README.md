@@ -1,4 +1,4 @@
-# Jackson's First MetaMask Snap
+# First MetaMask Snap
 
 Initialized with https://github.com/ritave/snap-passwordManager
 
